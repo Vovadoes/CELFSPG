@@ -1,0 +1,2694 @@
+----- ChartPLTWindow.py -----
+import sys
+
+import numpy as np
+from PyQt5 import QtWidgets
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, \
+    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+
+from main import Calculation, ChartLinePltData, ChartQuadRegressPltData
+
+from functions import get_super
+
+
+class ChartPLTWindow(QtWidgets.QDialog):
+
+    def __init__(self, n, *args, **kwargs):
+        super(ChartPLTWindow, self).__init__(*args, **kwargs)
+        self.setWindowTitle(f'График {n}')
+        self.setFixedSize(800, 800)
+
+        fig = Figure()
+        self.axes = fig.add_subplot(111)
+
+        sc = FigureCanvasQTAgg(fig)
+
+        toolbar = NavigationToolbar(sc, self)
+
+        layout = QtWidgets.QGridLayout(self)
+        layout.addWidget(toolbar, 0, 0, 1, 1)
+        layout.addWidget(sc, 1, 0, 1, 1)
+
+
+
+    def line(self, data: ChartLinePltData):
+        self.axes.plot(data.df, marker='o', label=[f"E={i}" for i in data.columns])
+        self.axes.grid(linestyle='--')
+
+        self.axes.set_ylabel(data.xlabel)
+        self.axes.set_xlabel(data.ylabel)
+        self.axes.set_xlim([0, max(data.index) * 1.2])
+        self.axes.set_ylim([0, max(data.df.max()) * 1.2])
+
+    def quad_regress(self, data: ChartQuadRegressPltData):
+        for i in data.columns:
+            model = np.poly1d(np.polyfit(data.df[i].index.tolist(), data.df[i].values.tolist(), 2))
+            polyline = np.linspace(0.1, 1, 50)
+            coefficients = list(model.coefficients)
+            self.axes.plot(
+                polyline, model(polyline), linestyle='dashed', linewidth=2,
+                label=f"{round(coefficients[0], 3)}x{get_super('2')} "
+                      f"{'+' if coefficients[1] > 0 else ''} {round(coefficients[1], 3)}x "
+                      f"{'+' if coefficients[2] > 0 else ''} {round(coefficients[2], 3)}"
+            )
+
+    def start(self):
+        self.axes.legend()
+        self.show()
+        self.exec_()
+
+
+if __name__ == "__main__":
+    d_lst_input = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    E_lst_input = [1, 1.6]
+    calculation = Calculation()
+    app = QtWidgets.QApplication(sys.argv)
+    chartPlt = ChartPLTWindow(1)
+    chartPlt.line(calculation.chart_v_y_data)
+    chartPlt.quad_regress(calculation.chart_quad_regress_data)
+    chartPlt.start()
+    app.exec_()
+
+
+----- Charts.py -----
+import matplotlib.pyplot as plt
+from pandas import DataFrame
+
+pi = 3.14159265
+Yc = 17.3 * (10 ** -6)
+
+class ChartLinePltData:
+    def __init__(self, n, df: DataFrame, xlabel: str = '', ylabel: str = ''):
+        self.n = n
+        self.columns = df.columns
+        self.index = df.index
+        self.df = df
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+
+
+class ChartQuadRegressPltData:
+    def __init__(self, n, df: DataFrame, linestyle='dashed', linewidth=2):
+        self.n = n
+        self.columns = df.columns
+        self.index = df.index
+        self.df = df
+        self.linestyle = linestyle
+        self.linewidth = linewidth
+        pass
+
+
+class ChartLinePLT:
+    def __init__(self, data: ChartLinePltData, alpha=0.75):
+        plt.figure(data.n)
+        plt.plot(data.df, marker='o', label=[f"E={i}" for i in data.columns], alpha=alpha)
+        plt.grid(linestyle='--')
+        plt.ylabel(data.xlabel)
+        plt.xlabel(data.ylabel)
+        plt.xlim([0, max(data.index) * 1.2])
+        plt.ylim([0, max(data.df.max()) * 1.2])
+
+
+----- create_zip.py -----
+import shutil
+shutil.make_archive('dist/UI', 'zip', 'dist/UI')
+
+----- functions.py -----
+from math import pi
+from Monitor import getMonitors
+from settings import STANDART_DPI
+
+
+
+def get_super(x):
+    normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()"
+    super_s = "ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖ۹ʳˢᵗᵘᵛʷˣʸᶻ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾"
+    res = x.maketrans(''.join(normal), ''.join(super_s))
+    return x.translate(res)
+
+
+def get_sub(x):
+    normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-=()"
+    sub_s = "ₐ₈CDₑբGₕᵢⱼₖₗₘₙₒₚQᵣₛₜᵤᵥwₓᵧZₐ♭꜀ᑯₑբ₉ₕᵢⱼₖₗₘₙₒₚ૧ᵣₛₜᵤᵥwₓᵧ₂₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎"
+    res = x.maketrans(''.join(normal), ''.join(sub_s))
+    return x.translate(res)
+
+
+def degrees_to_radians(angle: float) -> float:
+    return angle * pi / 180
+
+
+def change_size(window):
+    screen = window.screen()
+    monitors = getMonitors()
+    monitor = monitors[screen.name()]
+    print(screen.name(), monitor.get_max_dpi())
+    k = monitor.get_max_dpi() / STANDART_DPI
+    if k > 1:
+        window.setMinimumSize(round(window.size().width() * k), round(window.size().height() * k))
+        window.setMaximumSize(round(window.size().width() * k), round(window.size().height() * k))
+        window.setBaseSize(round(window.size().width() * k), round(window.size().height() * k))
+
+
+def radians_to_degrees(angle_rad: float) -> float:
+    return angle_rad * 180 / pi
+
+
+----- main.py -----
+import math
+
+
+
+
+pi = 3.14159265
+Yc = 17.3 * (10 ** -6)
+
+dct_sip = {
+    16: 1.19 / 1000,
+    25: 1.2 / 1000,
+    35: 0.868 / 1000,
+    50: 0.5951 / 1000,
+    70: 0.443 / 1000,
+    95: 0.320 / 1000,
+    120: 0.253 / 1000
+}
+
+
+def myround(x: float, lst: list):
+    for i in lst:
+        if x < i:
+            return i
+    return lst[-1]
+
+
+class Calculation:
+    def __init__(self, n: int, m: int, k: int, lst: list, U1: float, nl: float, cos_fi: float, P_kpd: float,
+                 q: float, U2: float, lst_iter: int, d0: int, d: int, f: int):
+
+        self.lst_iter = lst_iter
+        self.d0 = d0
+        self.d = d
+        self.f = f
+        self.lst = lst
+        global dct_sip
+        P_i = P_kpd / n
+
+        lst_P = []
+        for i in range(m):
+            lst_P.append(lst[i][1] * P_i)
+        print(f"{lst_P=}")
+
+        lst_I = []
+        for i in range(m):
+            lst_I.append(lst_P[i] / (U1 * cos_fi))
+        print(f"{lst_I=}")
+
+        dU = nl * U1 * 10
+        print(f"{dU=}")
+
+        lst_R = []
+        for i in range(m):
+            lst_R.append(dU / lst_I[i])
+        print(f"{lst_R=}")
+
+        self.lst_S = []
+        for i in range(m):
+            self.lst_S.append(q * lst[i][2] / lst_R[i])
+        print(f"{self.lst_S=}")
+
+        self.lst_S_gost = [
+            myround(self.lst_S[i], [35, 50, 70, 95, 120])
+            for i in range(len(self.lst_S))
+        ]
+        print(f"{self.lst_S_gost=}")
+
+        self.lst_R_new = [lst[i][2] * dct_sip[self.lst_S_gost[i]] for i in range(m)]
+        print(f"{self.lst_R_new=}")
+
+        self.lst_I_new = [1000 * lst_P[i] / (k * U2) for i in range(m)]
+        print(f"{self.lst_I_new=}")
+
+        self.lst_Un = [self.lst_R_new[i] * self.lst_I_new[i] for i in range(m)]
+        print(f"{self.lst_Un=}")
+
+        self.lst_Uv = [U2 - self.lst_Un[i] for i in range(m)]
+        print(f"{self.lst_Uv=}")
+        print()
+
+    def f1(self):
+        self.P_1_f = math.pow(self.lst_I_new[self.lst_iter], 2) * self.lst_R_new[self.lst_iter]
+        self.P_pub = self.P_1_f * self.f
+        print(f"{self.P_1_f=}")
+        print(f"{self.P_pub=}")
+        print()
+
+    def f2(self):
+        self.I = self.lst_I_new[self.lst_iter]
+        self.P_1_f = math.pow(self.lst_I_new[self.lst_iter], 2) * self.R
+        self.P_pub = self.P_1_f * self.f
+        print(f"{self.I=}")
+        print(f"{self.R=}")
+        print(f"{self.P_1_f=}")
+        print(f"{self.P_pub=}")
+        print()
+
+    def f3(self):
+        self.f2()
+        P_pub_1 = self.P_pub
+        self.f1()
+        P_pub_2 = self.P_pub
+        self.P_pub = P_pub_1 * 24 * 31
+        self.P_1_pub = P_pub_2 * 24 * 31
+        self.delta_P_pub = self.P_pub - self.P_1_pub
+        print(f"{self.P_pub=}")
+        print(f"{self.P_1_pub=}")
+        print(f"{self.delta_P_pub=}")
+        print()
+
+
+if __name__ == "__main__":
+    n = 96
+    m = 7
+    lst = [
+        ["1", 62, 350, 4],
+        ["2", 34, 390, 4],
+        ["3", 12, 120, 4],
+        ["4", 18, 172, 4],
+        ["5", 20, 200, 4],
+        ["6", 8, 80, 4],
+        ["7", 14, 120, 4],
+    ]
+    U1 = 0.4
+    nl = 5
+    cos_fi = 0.95
+    P_kpd = 80
+    q = 0.028
+
+    k = 3
+    U2 = 240
+
+    lst_iter = 0
+    d0 = 50
+    d = 0
+    f = 3
+
+    calculation = Calculation(n, m, k, lst, U1, nl, cos_fi, P_kpd, q, U2, lst_iter, d0, d, f)
+
+    calculation.f3()
+
+
+
+----- Monitor.py -----
+import ctypes
+import win32api
+from screeninfo import get_monitors
+
+PROCESS_PER_MONITOR_DPI_AWARE = len(get_monitors())
+MDT_EFFECTIVE_DPI = 0
+
+
+def round_custom(num, step):
+    return round(num / step) * step
+
+
+class Monitor:
+    def __init__(self, shcore, monitor):
+        self.shcore = shcore
+        self.monitor = monitor
+        self.dpiX = ctypes.c_uint()
+        self.dpiY = ctypes.c_uint()
+        shcore.GetDpiForMonitor(
+            monitor[0].handle,
+            MDT_EFFECTIVE_DPI,
+            ctypes.byref(self.dpiX),
+            ctypes.byref(self.dpiY)
+        )
+
+    def get_max_dpi(self):
+        return max([round_custom(self.dpiX.value, 25), round_custom(self.dpiY.value, 25)])
+
+
+def getMonitors():
+    dct = {}
+    shcore = ctypes.windll.shcore
+    monitors = win32api.EnumDisplayMonitors()
+    shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)
+    for i, monitor in enumerate(monitors):
+        name = win32api.GetMonitorInfo(monitors[i][0])['Device']
+        monitor_obj = Monitor(shcore, monitor)
+        dct[name] = monitor_obj
+        print(
+            f"{name} dpiX: {round_custom(monitor_obj.dpiX.value, 25)}, dpiY: {round_custom(monitor_obj.dpiY.value, 25)}"
+        )
+    return dct
+
+
+----- MyThread.py -----
+from PyQt5.QtCore import QThread
+
+
+class MyThread(QThread):
+    def __init__(self, fun=lambda: None):
+        self.fun = fun
+        super(MyThread, self).__init__()
+
+    def start(self, priority: 'QThread.Priority' = None) -> None:
+        self.fun()
+        super().start()
+        self.exec_()
+        self.quit()
+
+
+----- py_to_txt.py -----
+import os
+
+path = "."
+
+exclude = set(['venv', '.idea', '.venv', 'dist'])
+lst = []
+for root, d_names, f_names in os.walk(path):
+    d_names[:] = [d for d in d_names if d not in exclude]
+    if len(d_names) != 0:
+        for i in range(len(f_names)):
+            if os.path.splitext(f_names[i])[1] == '.py':
+                lst.append(os.path.join(root, f_names[i]))
+print(lst)
+
+with open('AllCode.txt', 'w+', encoding="UTF-8") as fw:
+    for i in lst:
+        with open(i, 'r', encoding="UTF-8") as fr:
+            name = i.replace('.\\', '').replace('\\', '/')
+            fw.write('-' * 5 + f' {name} ' + '-' * 5)
+            fw.write('\n')
+            arr = fr.read().split('\n')
+            s = ''
+            for i in arr:
+                    s += i + '\n'
+            fw.write(s)
+            fw.write('\n')
+
+
+----- settings.py -----
+DEDUG = True
+
+
+----- Table.py -----
+from typing import Callable
+from typing import List, Any
+
+from PyQt5 import QtWidgets, QtGui
+from files.TableWindow import Ui_Form as Ui_Form_Table
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from UI import mywindow
+
+
+class Table(QtWidgets.QDialog):
+    def __init__(self, base: 'mywindow', n: int, m: int, data: List[List[Any]] = None,
+                 block: bool = False,
+                 heading_x: Callable[[int], str] = lambda iterator: str(iterator),
+                 heading_y: Callable[[int], str] = lambda iterator: str(iterator),
+                 filter_table=lambda dct:
+                 round(dct['value'], 5)
+                 if dct['value'] is int or dct['value'] is float else
+                 dct['value'],
+                 types_matrix=None
+                 ):
+        super(Table, self).__init__()
+        self.ui = Ui_Form_Table()
+        self.ui.setupUi(self)
+        self.setWindowTitle('Таблица')
+        self.base = base
+        self.block = block
+        self.heading_x = heading_x
+        self.heading_y = heading_y
+        if types_matrix is None:
+            types_matrix = [[float for _ in range(n)] for _ in range(m)]
+        self.types_matrix = types_matrix
+        if data is None:
+            data = []
+        self.data = data
+        self.n = n
+        self.m = m
+        self.filter = filter_table
+
+        VerticalHeaderLabels = [self.heading_y(i) for i in range(max(len(self.data), self.m))]
+        HorizontalHeaderLabels = [
+            self.heading_x(i) for i in
+            range(max(len(self.data[0]) if len(self.data) > 0 else self.n, self.n))
+        ]
+        for j in range(min(len(self.data[0]) if len(self.data) > 0 else self.n, self.n)):
+            self.ui.tableWidget.insertColumn(j)
+
+        for i in range(min(len(self.data), self.m)):
+            self.ui.tableWidget.insertRow(i)
+            for j in range(min(len(self.data[0]) if len(self.data) > 0 else self.n, self.n)):
+                self.ui.tableWidget.setItem(
+                    i,
+                    j,
+                    QtWidgets.QTableWidgetItem(
+                        str(self.filter({'i': i, 'j': j, 'value': self.data[i][j]}))
+                    )
+                )
+
+        for j in range(len(self.data[0]) if len(self.data) > 0 else 0, self.n):
+            self.ui.tableWidget.insertColumn(j)
+        for i in range(len(self.data), self.m):
+            self.ui.tableWidget.insertRow(i)
+
+        for i in range(0, self.m):
+            start = len(self.data[0]) if len(self.data) > 0 else 0
+            if len(self.data) <= i < self.m:
+                start = 0
+            for j in range(start, self.n):
+                self.ui.tableWidget.setItem(
+                    i,
+                    j,
+                    QtWidgets.QTableWidgetItem("0.0")
+                )
+        self.ui.tableWidget.setHorizontalHeaderLabels(HorizontalHeaderLabels)
+        self.ui.tableWidget.setVerticalHeaderLabels(VerticalHeaderLabels)
+
+        self.ui.tableWidget.setSizeAdjustPolicy(
+            QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.ui.tableWidget.resizeColumnsToContents()
+
+        if self.block:
+            self.ui.tableWidget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+
+        self.ui.pushButton.clicked.connect(self.download_table)
+
+    def close_window(self):
+        self.close()
+
+    def download_table(self):
+        flag = False
+        self.data = []
+        for i in range(self.m):
+            lst = []
+            for j in range(self.n):
+                try:
+                    lst.append(
+                        self.types_matrix[i][j](self.ui.tableWidget.item(i, j).text().replace(",", '.')))
+                    self.ui.tableWidget.item(i, j).setBackground(QtGui.QColor(255, 255, 255))
+                except ValueError:
+                    self.ui.tableWidget.item(i, j).setBackground(QtGui.QColor(255, 0, 0))
+                    flag = True
+            self.data.append(lst)
+        if flag:
+            self.data = []
+        else:
+            self.close()
+        print(f"download_table data = {self.data}")
+
+
+----- TableLoader.py -----
+from typing import List, Any, TYPE_CHECKING
+from PyQt5.QtWidgets import QLabel
+from Table import Table
+
+if TYPE_CHECKING:
+    from UI import mywindow
+
+
+class TableLoader:
+    def __init__(self, main_window, n: int = 0, m: int = 0, label: QLabel = None,
+                 data: List[List[Any]] = None, **kwargs):
+        self.data = data
+        if data is None:
+            self.data = []
+        self.n = n
+        self.m = m
+        self.main_window: 'mywindow' = main_window
+        self.kwargs = kwargs
+        self.label = label
+
+    def open_table(self):
+        self.main_window.variables.update()
+        tale_window = Table(self.main_window, self.n, self.m, self.data, **self.kwargs)
+        tale_window.show()
+        tale_window.exec_()
+        self.data = tale_window.data
+
+        if self.label:
+            if self.main_window:
+                self.label.setStyleSheet("background-color: lightgreen")
+            else:
+                self.label.setStyleSheet("background-color: red")
+
+    def valid(self, m, n):
+        if len(self.data) == self.m:
+            if len(self.data[0]) == self.n or len(self.data) == 0 == self.n:
+                if self.n == n and self.m == m:
+                    return True
+                else:
+                    self.n = n
+                    self.m = m
+        if self.label:
+            self.label.setStyleSheet("background-color: red")
+        return False
+
+
+----- test.py -----
+
+
+
+def f1(s):
+    lst1 = []
+    lst2 = []
+    lst4 = []
+
+    lst = s.split(', ')
+
+    for i in lst:
+        lst1.append(f"{i}=self.variables.{i},")
+        lst2.append(f"self.{i} = mywindow.is_float(self.main_window.ui.doubleSpinBox)")
+        lst4.append(f"self.{i}=None")
+
+    print()
+    for i in lst4:
+        print(i)
+    print()
+    for i in lst2:
+        print(i)
+    print()
+    for i in lst1:
+        print(i)
+
+
+s = 'lst_iter, d0, d, f'
+f1(s)
+lst = '''self.d0 = mywindow.is_float(self.main_window.ui.doubleSpinBox_9)
+        self.d = mywindow.is_float(self.main_window.ui.doubleSpinBox_11)
+        self.f = mywindow.is_float(self.main_window.ui.doubleSpinBox_12)'''\
+    .replace('        ', '').replace('(', ')').split('\n')
+
+for i in lst:
+    a = i.split(')')
+
+
+----- UI.py -----
+from typing import Callable
+from typing import List, Any
+
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QThread
+
+from files.MainWindow import Ui_MainWindow
+from files.ResultWindow1 import Ui_Form as Ui_Form1
+from files.ResultWindow2 import Ui_Form as Ui_Form2
+from files.ResultWindow3 import Ui_Form as Ui_Form3
+from files.ResultWindow import Ui_Form
+
+from main import Calculation
+from functions import change_size, get_sub, get_super
+from MyThread import MyThread
+from TableLoader import TableLoader
+
+from settings import DEDUG
+
+import sys
+
+
+
+
+class Variables:
+    def __init__(self, main_window):
+        self.main_window: mywindow = main_window
+        self.n = None
+        self.m = None
+        self.U = None
+        self.nl = None
+        self.cos_fi = None
+        self.P_kpd = None
+        self.q = None
+        self.k = None
+        self.U2 = None
+        self.lst_iter = None
+        self.d0 = None
+        self.d = None
+        self.f = None
+        self.load()
+
+    def load(self):
+        self.n = mywindow.is_int(self.main_window.ui.doubleSpinBox)
+        self.m = mywindow.is_int(self.main_window.ui.doubleSpinBox_2)
+        self.U = mywindow.is_float(self.main_window.ui.doubleSpinBox_4)
+        self.nl = mywindow.is_float(self.main_window.ui.doubleSpinBox_7)
+        self.cos_fi = mywindow.is_float(self.main_window.ui.doubleSpinBox_6)
+        self.P_kpd = mywindow.is_float(self.main_window.ui.doubleSpinBox_5)
+        self.q = mywindow.is_float(self.main_window.ui.doubleSpinBox_10)
+        self.k = mywindow.is_int(self.main_window.ui.doubleSpinBox_3)
+        self.U2 = mywindow.is_float(self.main_window.ui.doubleSpinBox_8)
+        self.lst_iter = self.main_window.ui.comboBox.currentIndex()
+        self.d0 = mywindow.is_float(self.main_window.ui.doubleSpinBox_9)
+        self.d = mywindow.is_float(self.main_window.ui.doubleSpinBox_11)
+        self.f = mywindow.is_float(self.main_window.ui.doubleSpinBox_12)
+
+    def update(self):
+        self.load()
+        self.main_window.table_loader1.m = self.m
+
+
+class mywindow(QtWidgets.QMainWindow):
+
+    def __init__(self):
+        super(mywindow, self).__init__()
+
+        self.calculation = None
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+
+        if DEDUG:
+
+        change_size(self)
+
+        self.lst_Thread = []
+
+        self.variables = Variables(self)
+
+        loader1_n = 4
+        loader1_m = self.variables.m
+        loader1_label = self.ui.label_13
+        loader1_data = [
+            ["AB", 62, 350, 4],
+            ["AC", 34, 390, 4],
+            ["DB", 12, 120, 4],
+            ["EF", 18, 172, 4],
+            ["KL", 20, 200, 4],
+            ["NM", 8, 80, 4],
+            ["OC", 14, 120, 4],
+        ]
+        loader1_block = False
+        loader1_heading_x = lambda iterator: \
+            [
+                "Наименование участков",
+                "Количество домов на участке",
+                "Длина участка, м",
+                "Число жил провода по СИП-2"
+            ][iterator]
+        loader1_types_matrix = [[str, float, int, int] for _ in range(loader1_m)]
+
+
+        self.table_loader1 = TableLoader(
+            self, loader1_n, loader1_m, loader1_label,
+            block=loader1_block,
+            heading_x=loader1_heading_x,
+            types_matrix=loader1_types_matrix
+        )
+
+        if DEDUG:
+            pass
+            self.table_loader1.data = loader1_data
+            self.ui.comboBox.addItems([i[0] for i in loader1_data])
+
+        self.ui.pushButton_8.clicked.connect(self.handler_open_table_1)
+
+
+        self.ui.pushButton.clicked.connect(lambda: self.calculate1(lambda: self.calculation.f1()))
+        self.ui.pushButton_2.clicked.connect(lambda: self.calculate2(lambda: self.calculation.f2()))
+        self.ui.pushButton_3.clicked.connect(lambda: self.calculate3(lambda: self.calculation.f3()))
+
+    def handler_open_table_1(self):
+        self.table_loader1.open_table()
+        self.ui.comboBox.clear()
+        self.ui.comboBox.addItems([i[0] for i in self.table_loader1.data])
+
+    def calculate(self, fun, *args, **kwargs):
+        self.variables.update()
+        condition = True
+        if condition:
+            self.calculation = Calculation(
+                n=self.variables.n,
+                m=self.variables.m,
+                lst=self.table_loader1.data,
+                U1=self.variables.U,
+                nl=self.variables.nl,
+                cos_fi=self.variables.cos_fi,
+                P_kpd=self.variables.P_kpd,
+                q=self.variables.q,
+                k=self.variables.k,
+                U2=self.variables.U2,
+                lst_iter=self.variables.lst_iter,
+                d0=self.variables.d0,
+                d=self.variables.d,
+                f=self.variables.f,
+            )
+            fun(*args, **kwargs)
+
+
+    def calculate1(self, fun, *args, **kwargs):
+        self.calculate(fun, *args, **kwargs)
+        window = Finish1(
+            self
+        )
+        window.show()
+
+        windowThread = MyThread(lambda: window.exec_())
+        windowThread.start()
+        self.lst_Thread.append(windowThread)
+
+    def calculate2(self, fun, *args, **kwargs):
+        self.calculate(fun, *args, **kwargs)
+        window = Finish2(
+            self
+        )
+        window.show()
+
+        windowThread = MyThread(lambda: window.exec_())
+        windowThread.start()
+        self.lst_Thread.append(windowThread)
+
+    def calculate3(self, fun, *args, **kwargs):
+        self.calculate(fun, *args, **kwargs)
+        window = Finish3(
+            self
+        )
+        window.show()
+
+        windowThread = MyThread(lambda: window.exec_())
+        windowThread.start()
+        self.lst_Thread.append(windowThread)
+
+    def exec_(self) -> int:
+        a = super().exec_()
+        for i in self.lst_Thread:
+            i.wait()
+        return a
+
+    @staticmethod
+    def is_float(value: QtWidgets.QDoubleSpinBox) -> float:
+        try:
+            a = float(value.value())
+            value.setStyleSheet("QDoubleSpinBox {}")
+            return a
+        except ValueError:
+            value.setStyleSheet("QDoubleSpinBox { background-color: red; }")
+            raise ValueError()
+
+    @staticmethod
+    def is_int(value: QtWidgets.QDoubleSpinBox) -> int:
+        try:
+            a = int(round(float(value.value())))
+            value.setStyleSheet("QDoubleSpinBox {}")
+            return a
+        except ValueError:
+            value.setStyleSheet("QDoubleSpinBox { background-color: red; }")
+            raise ValueError()
+
+
+class Finish(QtWidgets.QDialog):
+    def __init__(self, parent: mywindow):
+        super(Finish, self).__init__()
+        self.ui = Ui_Form()
+        self.parent = parent
+        self.ui.setupUi(self)
+        change_size(self)
+
+        lst = []
+        for i in range(self.parent.variables.m):
+            data = self.parent.table_loader1.data
+            lst.append([
+                data[i][0], round(self.parent.table_loader1.data[i][2], 4),
+                self.parent.table_loader1.data[i][3], round(self.parent.calculation.lst_S_gost[i], 4),
+                round(self.parent.calculation.lst_R_new[i], 4),
+                round(self.parent.calculation.lst_I_new[i], 4),
+                round(self.parent.calculation.lst_Un[i], 4),
+                round(self.parent.calculation.lst_Uv[i], 4),
+            ])
+        print(f"{lst=}")
+
+        filter_table_results_1 = lambda dct: dct['value']
+
+        loader_results_1_n = 8
+        loader_results_1_m = self.parent.variables.m
+        loader_results_1_data = lst
+        types_matrix_results_1 = [[str, float, int, int, float, float, float, float] for _ in range(loader_results_1_m)]
+        loader_results_1_block = True
+        loader_results_1_heading_x = lambda iterator: [
+            "Наименование\n участка",
+            "Длина участка L(м)",
+            "Параметры СИП\nЧисло жил",
+            f"Параметры СИП\nСечение жил, S/мм{get_super('2')}",
+            "Сопротивление на\nучастке R(Ом)",
+            "Сила тока на\nучастке I(А)",
+            "Падение напряжения\nна участке Un(В)",
+            "Напряжение на\nконечной точке\nпотребления Ui, (В)",
+        ][iterator]
+
+        loader_results_1_heading_y = lambda iterator: str(iterator)
+        self.table_loader_results_1 = TableLoader(
+            self.parent, loader_results_1_n, loader_results_1_m, data=loader_results_1_data,
+            block=loader_results_1_block,
+            heading_x=loader_results_1_heading_x, heading_y=loader_results_1_heading_y,
+            filter_table=filter_table_results_1, types_matrix=types_matrix_results_1
+        )
+
+
+        self.table_loader_results_1.kwargs['block'] = True
+
+        self.lst_Thread = []
+
+        self.lst_Thread.append(MyThread(lambda: self.table_loader_results_1.open_table()))
+        self.ui.pushButton_2.clicked.connect(
+            lambda: self.lst_Thread[0].start()
+        )
+
+        self.ui.pushButton.clicked.connect(self.exit_w)
+
+    def exit_w(self):
+        self.table_loader_results_1.kwargs['block'] = False
+        self.close()
+
+
+    def view_table(self):
+        pass
+
+
+class Finish1(QtWidgets.QDialog):
+    def __init__(self, parent: mywindow):
+        super(Finish1, self).__init__()
+        self.ui = Ui_Form1()
+        self.parent = parent
+        self.ui.setupUi(self)
+        change_size(self)
+        self.ui.comboBox.addItem([i[0] for i in self.parent.table_loader1.data][self.parent.ui.comboBox.currentIndex()])
+        self.ui.comboBox_2.addItem(
+            [i[0] for i in self.parent.table_loader1.data][self.parent.ui.comboBox.currentIndex()])
+        self.ui.doubleSpinBox_10.setValue(self.parent.calculation.P_1_f)
+        self.ui.doubleSpinBox_11.setValue(self.parent.calculation.f)
+        self.ui.doubleSpinBox_12.setValue(round(self.parent.calculation.P_pub/1000, 3))
+
+        self.ui.pushButton.clicked.connect(self.exit_w)
+
+    def exit_w(self):
+        self.close()
+
+
+class Finish2(QtWidgets.QDialog):
+    def __init__(self, parent: mywindow):
+        super(Finish2, self).__init__()
+        self.ui = Ui_Form2()
+        self.parent = parent
+        self.ui.setupUi(self)
+        change_size(self)
+
+        self.ui.comboBox.addItem([i[0] for i in self.parent.table_loader1.data][self.parent.ui.comboBox.currentIndex()])
+        self.ui.comboBox_2.addItem(
+            [i[0] for i in self.parent.table_loader1.data][self.parent.ui.comboBox.currentIndex()])
+        self.ui.doubleSpinBox_10.setValue(self.parent.variables.d0)
+        self.ui.doubleSpinBox_14.setValue(self.parent.variables.d0)
+        self.ui.doubleSpinBox_11.setValue(round(self.parent.calculation.I, 1))
+        self.ui.doubleSpinBox_12.setValue(round(self.parent.calculation.R * 1000))
+        self.ui.doubleSpinBox_13.setValue(round(self.parent.calculation.P_1_f, 1))
+        self.ui.doubleSpinBox_15.setValue(round(self.parent.calculation.P_pub/1000, 3))
+
+        self.ui.doubleSpinBox_16.setValue(self.parent.variables.f)
+
+        self.ui.pushButton.clicked.connect(self.exit_w)
+
+    def exit_w(self):
+        self.close()
+
+
+class Finish3(QtWidgets.QDialog):
+    def __init__(self, parent: mywindow):
+        super(Finish3, self).__init__()
+        self.ui = Ui_Form3()
+        self.parent = parent
+        self.ui.setupUi(self)
+        change_size(self)
+
+        self.setWindowTitle(
+            f"Растёт снижения потерь при реконструкции участка "
+            f"{[i[0] for i in self.parent.table_loader1.data][self.parent.ui.comboBox.currentIndex()]}"
+        )
+
+        self.ui.doubleSpinBox_11.setValue(round(self.parent.calculation.P_pub/1000))
+        self.ui.doubleSpinBox_12.setValue(round(self.parent.calculation.P_1_pub/1000))
+        self.ui.doubleSpinBox_13.setValue(round(self.parent.calculation.delta_P_pub/1000))
+
+        self.ui.pushButton.clicked.connect(self.exit_w)
+
+    def exit_w(self):
+        self.close()
+
+
+app = QtWidgets.QApplication([])
+application = mywindow()
+application.show()
+
+sys.exit(app.exec())
+
+
+----- files/MainWindow.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(1064, 802)
+        MainWindow.setMinimumSize(QtCore.QSize(0, 0))
+        MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.gridLayout_18 = QtWidgets.QGridLayout(self.centralwidget)
+        self.gridLayout_18.setObjectName("gridLayout_18")
+        self.label_11 = QtWidgets.QLabel(self.centralwidget)
+        self.label_11.setMinimumSize(QtCore.QSize(400, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_11.setFont(font)
+        self.label_11.setObjectName("label_11")
+        self.gridLayout_18.addWidget(self.label_11, 0, 0, 1, 1)
+        self.gridLayout_16 = QtWidgets.QGridLayout()
+        self.gridLayout_16.setObjectName("gridLayout_16")
+        self.gridLayout = QtWidgets.QGridLayout()
+        self.gridLayout.setObjectName("gridLayout")
+        self.label_3 = QtWidgets.QLabel(self.centralwidget)
+        self.label_3.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_3.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout.addWidget(self.label_3, 0, 2, 1, 1)
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_2.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout.addWidget(self.label_2, 0, 1, 1, 1)
+        self.label_5 = QtWidgets.QLabel(self.centralwidget)
+        self.label_5.setText("")
+        self.label_5.setObjectName("label_5")
+        self.gridLayout.addWidget(self.label_5, 0, 4, 1, 1)
+        self.doubleSpinBox = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox.setFont(font)
+        self.doubleSpinBox.setDecimals(0)
+        self.doubleSpinBox.setMinimum(-16777215.0)
+        self.doubleSpinBox.setMaximum(16777215.0)
+        self.doubleSpinBox.setObjectName("doubleSpinBox")
+        self.gridLayout.addWidget(self.doubleSpinBox, 0, 3, 1, 1)
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout, 0, 0, 1, 1)
+        self.gridLayout_2 = QtWidgets.QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.label_8 = QtWidgets.QLabel(self.centralwidget)
+        self.label_8.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_8.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_8.setFont(font)
+        self.label_8.setObjectName("label_8")
+        self.gridLayout_2.addWidget(self.label_8, 0, 2, 1, 1)
+        self.label_9 = QtWidgets.QLabel(self.centralwidget)
+        self.label_9.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_9.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_9.setFont(font)
+        self.label_9.setObjectName("label_9")
+        self.gridLayout_2.addWidget(self.label_9, 0, 4, 1, 1)
+        self.label_10 = QtWidgets.QLabel(self.centralwidget)
+        self.label_10.setText("")
+        self.label_10.setObjectName("label_10")
+        self.gridLayout_2.addWidget(self.label_10, 0, 5, 1, 1)
+        self.label_6 = QtWidgets.QLabel(self.centralwidget)
+        self.label_6.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_6.setFont(font)
+        self.label_6.setObjectName("label_6")
+        self.gridLayout_2.addWidget(self.label_6, 0, 0, 1, 1)
+        self.label_7 = QtWidgets.QLabel(self.centralwidget)
+        self.label_7.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_7.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_7.setFont(font)
+        self.label_7.setObjectName("label_7")
+        self.gridLayout_2.addWidget(self.label_7, 0, 1, 1, 1)
+        self.doubleSpinBox_2 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_2.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_2.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_2.setFont(font)
+        self.doubleSpinBox_2.setDecimals(0)
+        self.doubleSpinBox_2.setMinimum(-16777215.0)
+        self.doubleSpinBox_2.setMaximum(16777215.0)
+        self.doubleSpinBox_2.setObjectName("doubleSpinBox_2")
+        self.gridLayout_2.addWidget(self.doubleSpinBox_2, 0, 3, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_2, 1, 0, 1, 1)
+        self.gridLayout_8 = QtWidgets.QGridLayout()
+        self.gridLayout_8.setObjectName("gridLayout_8")
+        self.label_37 = QtWidgets.QLabel(self.centralwidget)
+        self.label_37.setMinimumSize(QtCore.QSize(0, 0))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_37.setFont(font)
+        self.label_37.setObjectName("label_37")
+        self.gridLayout_8.addWidget(self.label_37, 0, 0, 1, 1)
+        self.gridLayout_14 = QtWidgets.QGridLayout()
+        self.gridLayout_14.setObjectName("gridLayout_14")
+        self.label_13 = QtWidgets.QLabel(self.centralwidget)
+        self.label_13.setMinimumSize(QtCore.QSize(50, 0))
+        self.label_13.setMaximumSize(QtCore.QSize(16777215, 30))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_13.setFont(font)
+        self.label_13.setStyleSheet("background-color: red")
+        self.label_13.setText("")
+        self.label_13.setObjectName("label_13")
+        self.gridLayout_14.addWidget(self.label_13, 0, 1, 1, 1)
+        self.pushButton_8 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_8.setMinimumSize(QtCore.QSize(415, 0))
+        self.pushButton_8.setMaximumSize(QtCore.QSize(16777215, 30))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton_8.setFont(font)
+        self.pushButton_8.setObjectName("pushButton_8")
+        self.gridLayout_14.addWidget(self.pushButton_8, 0, 0, 1, 1)
+        self.gridLayout_8.addLayout(self.gridLayout_14, 1, 0, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_8, 2, 0, 1, 1)
+        self.gridLayout_4 = QtWidgets.QGridLayout()
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.label_17 = QtWidgets.QLabel(self.centralwidget)
+        self.label_17.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_17.setFont(font)
+        self.label_17.setObjectName("label_17")
+        self.gridLayout_4.addWidget(self.label_17, 0, 0, 1, 1)
+        self.label_18 = QtWidgets.QLabel(self.centralwidget)
+        self.label_18.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_18.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_18.setFont(font)
+        self.label_18.setObjectName("label_18")
+        self.gridLayout_4.addWidget(self.label_18, 0, 1, 1, 1)
+        self.label_19 = QtWidgets.QLabel(self.centralwidget)
+        self.label_19.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_19.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_19.setFont(font)
+        self.label_19.setObjectName("label_19")
+        self.gridLayout_4.addWidget(self.label_19, 0, 2, 1, 1)
+        self.doubleSpinBox_4 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_4.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_4.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_4.setFont(font)
+        self.doubleSpinBox_4.setDecimals(2)
+        self.doubleSpinBox_4.setMinimum(-16777215.0)
+        self.doubleSpinBox_4.setMaximum(16777215.0)
+        self.doubleSpinBox_4.setSingleStep(0.01)
+        self.doubleSpinBox_4.setObjectName("doubleSpinBox_4")
+        self.gridLayout_4.addWidget(self.doubleSpinBox_4, 0, 3, 1, 1)
+        self.label_20 = QtWidgets.QLabel(self.centralwidget)
+        self.label_20.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_20.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_20.setFont(font)
+        self.label_20.setObjectName("label_20")
+        self.gridLayout_4.addWidget(self.label_20, 0, 4, 1, 1)
+        self.label_21 = QtWidgets.QLabel(self.centralwidget)
+        self.label_21.setText("")
+        self.label_21.setObjectName("label_21")
+        self.gridLayout_4.addWidget(self.label_21, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_4, 3, 0, 1, 1)
+        self.gridLayout_7 = QtWidgets.QGridLayout()
+        self.gridLayout_7.setObjectName("gridLayout_7")
+        self.label_32 = QtWidgets.QLabel(self.centralwidget)
+        self.label_32.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_32.setFont(font)
+        self.label_32.setObjectName("label_32")
+        self.gridLayout_7.addWidget(self.label_32, 0, 0, 1, 1)
+        self.label_36 = QtWidgets.QLabel(self.centralwidget)
+        self.label_36.setText("")
+        self.label_36.setObjectName("label_36")
+        self.gridLayout_7.addWidget(self.label_36, 0, 5, 1, 1)
+        self.doubleSpinBox_7 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_7.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_7.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_7.setFont(font)
+        self.doubleSpinBox_7.setDecimals(0)
+        self.doubleSpinBox_7.setMinimum(-16777215.0)
+        self.doubleSpinBox_7.setMaximum(16777215.0)
+        self.doubleSpinBox_7.setObjectName("doubleSpinBox_7")
+        self.gridLayout_7.addWidget(self.doubleSpinBox_7, 0, 3, 1, 1)
+        self.label_38 = QtWidgets.QLabel(self.centralwidget)
+        self.label_38.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_38.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_38.setFont(font)
+        self.label_38.setObjectName("label_38")
+        self.gridLayout_7.addWidget(self.label_38, 0, 2, 1, 1)
+        self.label_35 = QtWidgets.QLabel(self.centralwidget)
+        self.label_35.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_35.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_35.setFont(font)
+        self.label_35.setObjectName("label_35")
+        self.gridLayout_7.addWidget(self.label_35, 0, 4, 1, 1)
+        self.label_34 = QtWidgets.QLabel(self.centralwidget)
+        self.label_34.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_34.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_34.setFont(font)
+        self.label_34.setObjectName("label_34")
+        self.gridLayout_7.addWidget(self.label_34, 0, 1, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_7, 4, 0, 1, 1)
+        self.gridLayout_6 = QtWidgets.QGridLayout()
+        self.gridLayout_6.setObjectName("gridLayout_6")
+        self.label_27 = QtWidgets.QLabel(self.centralwidget)
+        self.label_27.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_27.setFont(font)
+        self.label_27.setObjectName("label_27")
+        self.gridLayout_6.addWidget(self.label_27, 0, 0, 1, 1)
+        self.label_28 = QtWidgets.QLabel(self.centralwidget)
+        self.label_28.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_28.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_28.setFont(font)
+        self.label_28.setObjectName("label_28")
+        self.gridLayout_6.addWidget(self.label_28, 0, 1, 1, 1)
+        self.label_29 = QtWidgets.QLabel(self.centralwidget)
+        self.label_29.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_29.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_29.setFont(font)
+        self.label_29.setObjectName("label_29")
+        self.gridLayout_6.addWidget(self.label_29, 0, 2, 1, 1)
+        self.doubleSpinBox_6 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_6.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_6.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_6.setFont(font)
+        self.doubleSpinBox_6.setDecimals(2)
+        self.doubleSpinBox_6.setMinimum(-16777215.0)
+        self.doubleSpinBox_6.setMaximum(16777215.0)
+        self.doubleSpinBox_6.setSingleStep(0.01)
+        self.doubleSpinBox_6.setObjectName("doubleSpinBox_6")
+        self.gridLayout_6.addWidget(self.doubleSpinBox_6, 0, 3, 1, 1)
+        self.label_30 = QtWidgets.QLabel(self.centralwidget)
+        self.label_30.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_30.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_30.setFont(font)
+        self.label_30.setObjectName("label_30")
+        self.gridLayout_6.addWidget(self.label_30, 0, 4, 1, 1)
+        self.label_31 = QtWidgets.QLabel(self.centralwidget)
+        self.label_31.setText("")
+        self.label_31.setObjectName("label_31")
+        self.gridLayout_6.addWidget(self.label_31, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_6, 5, 0, 1, 1)
+        self.gridLayout_5 = QtWidgets.QGridLayout()
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.label_22 = QtWidgets.QLabel(self.centralwidget)
+        self.label_22.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_22.setFont(font)
+        self.label_22.setObjectName("label_22")
+        self.gridLayout_5.addWidget(self.label_22, 0, 0, 1, 1)
+        self.label_23 = QtWidgets.QLabel(self.centralwidget)
+        self.label_23.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_23.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_23.setFont(font)
+        self.label_23.setObjectName("label_23")
+        self.gridLayout_5.addWidget(self.label_23, 0, 1, 1, 1)
+        self.label_24 = QtWidgets.QLabel(self.centralwidget)
+        self.label_24.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_24.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_24.setFont(font)
+        self.label_24.setObjectName("label_24")
+        self.gridLayout_5.addWidget(self.label_24, 0, 2, 1, 1)
+        self.doubleSpinBox_5 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_5.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_5.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_5.setFont(font)
+        self.doubleSpinBox_5.setDecimals(0)
+        self.doubleSpinBox_5.setMinimum(-16777215.0)
+        self.doubleSpinBox_5.setMaximum(16777215.0)
+        self.doubleSpinBox_5.setObjectName("doubleSpinBox_5")
+        self.gridLayout_5.addWidget(self.doubleSpinBox_5, 0, 3, 1, 1)
+        self.label_25 = QtWidgets.QLabel(self.centralwidget)
+        self.label_25.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_25.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_25.setFont(font)
+        self.label_25.setObjectName("label_25")
+        self.gridLayout_5.addWidget(self.label_25, 0, 4, 1, 1)
+        self.label_26 = QtWidgets.QLabel(self.centralwidget)
+        self.label_26.setText("")
+        self.label_26.setObjectName("label_26")
+        self.gridLayout_5.addWidget(self.label_26, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_5, 6, 0, 1, 1)
+        self.gridLayout_11 = QtWidgets.QGridLayout()
+        self.gridLayout_11.setObjectName("gridLayout_11")
+        self.label_46 = QtWidgets.QLabel(self.centralwidget)
+        self.label_46.setMinimumSize(QtCore.QSize(475, 35))
+        self.label_46.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_46.setFont(font)
+        self.label_46.setObjectName("label_46")
+        self.gridLayout_11.addWidget(self.label_46, 0, 0, 1, 1)
+        self.label_47 = QtWidgets.QLabel(self.centralwidget)
+        self.label_47.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_47.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_47.setFont(font)
+        self.label_47.setObjectName("label_47")
+        self.gridLayout_11.addWidget(self.label_47, 0, 1, 1, 1)
+        self.label_48 = QtWidgets.QLabel(self.centralwidget)
+        self.label_48.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_48.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_48.setFont(font)
+        self.label_48.setObjectName("label_48")
+        self.gridLayout_11.addWidget(self.label_48, 0, 2, 1, 1)
+        self.doubleSpinBox_10 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_10.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_10.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_10.setFont(font)
+        self.doubleSpinBox_10.setDecimals(3)
+        self.doubleSpinBox_10.setMinimum(-16777215.0)
+        self.doubleSpinBox_10.setMaximum(16777215.0)
+        self.doubleSpinBox_10.setSingleStep(0.001)
+        self.doubleSpinBox_10.setObjectName("doubleSpinBox_10")
+        self.gridLayout_11.addWidget(self.doubleSpinBox_10, 0, 3, 1, 1)
+        self.label_49 = QtWidgets.QLabel(self.centralwidget)
+        self.label_49.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_49.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_49.setFont(font)
+        self.label_49.setObjectName("label_49")
+        self.gridLayout_11.addWidget(self.label_49, 0, 4, 1, 1)
+        self.label_50 = QtWidgets.QLabel(self.centralwidget)
+        self.label_50.setText("")
+        self.label_50.setObjectName("label_50")
+        self.gridLayout_11.addWidget(self.label_50, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_11, 7, 0, 1, 1)
+        self.gridLayout_3 = QtWidgets.QGridLayout()
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.label_12 = QtWidgets.QLabel(self.centralwidget)
+        self.label_12.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_12.setFont(font)
+        self.label_12.setObjectName("label_12")
+        self.gridLayout_3.addWidget(self.label_12, 0, 0, 1, 1)
+        self.label_14 = QtWidgets.QLabel(self.centralwidget)
+        self.label_14.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_14.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_14.setFont(font)
+        self.label_14.setObjectName("label_14")
+        self.gridLayout_3.addWidget(self.label_14, 0, 1, 1, 1)
+        self.label_15 = QtWidgets.QLabel(self.centralwidget)
+        self.label_15.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_15.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_15.setFont(font)
+        self.label_15.setObjectName("label_15")
+        self.gridLayout_3.addWidget(self.label_15, 0, 2, 1, 1)
+        self.doubleSpinBox_3 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_3.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_3.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_3.setFont(font)
+        self.doubleSpinBox_3.setDecimals(0)
+        self.doubleSpinBox_3.setMinimum(-16777215.0)
+        self.doubleSpinBox_3.setMaximum(16777215.0)
+        self.doubleSpinBox_3.setObjectName("doubleSpinBox_3")
+        self.gridLayout_3.addWidget(self.doubleSpinBox_3, 0, 3, 1, 1)
+        self.label_16 = QtWidgets.QLabel(self.centralwidget)
+        self.label_16.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_16.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_16.setFont(font)
+        self.label_16.setObjectName("label_16")
+        self.gridLayout_3.addWidget(self.label_16, 0, 4, 1, 1)
+        self.label_33 = QtWidgets.QLabel(self.centralwidget)
+        self.label_33.setText("")
+        self.label_33.setObjectName("label_33")
+        self.gridLayout_3.addWidget(self.label_33, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_3, 8, 0, 1, 1)
+        self.gridLayout_9 = QtWidgets.QGridLayout()
+        self.gridLayout_9.setObjectName("gridLayout_9")
+        self.label_39 = QtWidgets.QLabel(self.centralwidget)
+        self.label_39.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_39.setFont(font)
+        self.label_39.setObjectName("label_39")
+        self.gridLayout_9.addWidget(self.label_39, 0, 0, 1, 1)
+        self.label_40 = QtWidgets.QLabel(self.centralwidget)
+        self.label_40.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_40.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_40.setFont(font)
+        self.label_40.setObjectName("label_40")
+        self.gridLayout_9.addWidget(self.label_40, 0, 1, 1, 1)
+        self.label_41 = QtWidgets.QLabel(self.centralwidget)
+        self.label_41.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_41.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_41.setFont(font)
+        self.label_41.setObjectName("label_41")
+        self.gridLayout_9.addWidget(self.label_41, 0, 2, 1, 1)
+        self.doubleSpinBox_8 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_8.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_8.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_8.setFont(font)
+        self.doubleSpinBox_8.setDecimals(2)
+        self.doubleSpinBox_8.setMinimum(-16777215.0)
+        self.doubleSpinBox_8.setMaximum(16777215.0)
+        self.doubleSpinBox_8.setSingleStep(0.01)
+        self.doubleSpinBox_8.setObjectName("doubleSpinBox_8")
+        self.gridLayout_9.addWidget(self.doubleSpinBox_8, 0, 3, 1, 1)
+        self.label_42 = QtWidgets.QLabel(self.centralwidget)
+        self.label_42.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_42.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_42.setFont(font)
+        self.label_42.setObjectName("label_42")
+        self.gridLayout_9.addWidget(self.label_42, 0, 4, 1, 1)
+        self.label_43 = QtWidgets.QLabel(self.centralwidget)
+        self.label_43.setText("")
+        self.label_43.setObjectName("label_43")
+        self.gridLayout_9.addWidget(self.label_43, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_9, 9, 0, 1, 1)
+        self.gridLayout_10 = QtWidgets.QGridLayout()
+        self.gridLayout_10.setObjectName("gridLayout_10")
+        self.label_53 = QtWidgets.QLabel(self.centralwidget)
+        self.label_53.setText("")
+        self.label_53.setObjectName("label_53")
+        self.gridLayout_10.addWidget(self.label_53, 0, 2, 1, 1)
+        self.label_44 = QtWidgets.QLabel(self.centralwidget)
+        self.label_44.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_44.setFont(font)
+        self.label_44.setObjectName("label_44")
+        self.gridLayout_10.addWidget(self.label_44, 0, 0, 1, 1)
+        self.comboBox = QtWidgets.QComboBox(self.centralwidget)
+        self.comboBox.setMinimumSize(QtCore.QSize(214, 25))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.comboBox.setFont(font)
+        self.comboBox.setObjectName("comboBox")
+        self.gridLayout_10.addWidget(self.comboBox, 0, 1, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_10, 10, 0, 1, 1)
+        self.gridLayout_12 = QtWidgets.QGridLayout()
+        self.gridLayout_12.setObjectName("gridLayout_12")
+        self.label_45 = QtWidgets.QLabel(self.centralwidget)
+        self.label_45.setMinimumSize(QtCore.QSize(668, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_45.setFont(font)
+        self.label_45.setObjectName("label_45")
+        self.gridLayout_12.addWidget(self.label_45, 0, 0, 1, 1)
+        self.label_51 = QtWidgets.QLabel(self.centralwidget)
+        self.label_51.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_51.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_51.setFont(font)
+        self.label_51.setObjectName("label_51")
+        self.gridLayout_12.addWidget(self.label_51, 0, 1, 1, 1)
+        self.label_52 = QtWidgets.QLabel(self.centralwidget)
+        self.label_52.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_52.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_52.setFont(font)
+        self.label_52.setObjectName("label_52")
+        self.gridLayout_12.addWidget(self.label_52, 0, 2, 1, 1)
+        self.doubleSpinBox_9 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_9.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_9.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_9.setFont(font)
+        self.doubleSpinBox_9.setDecimals(2)
+        self.doubleSpinBox_9.setMinimum(-16777215.0)
+        self.doubleSpinBox_9.setMaximum(16777215.0)
+        self.doubleSpinBox_9.setSingleStep(0.01)
+        self.doubleSpinBox_9.setObjectName("doubleSpinBox_9")
+        self.gridLayout_12.addWidget(self.doubleSpinBox_9, 0, 3, 1, 1)
+        self.label_54 = QtWidgets.QLabel(self.centralwidget)
+        self.label_54.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_54.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_54.setFont(font)
+        self.label_54.setObjectName("label_54")
+        self.gridLayout_12.addWidget(self.label_54, 0, 4, 1, 1)
+        self.label_55 = QtWidgets.QLabel(self.centralwidget)
+        self.label_55.setText("")
+        self.label_55.setObjectName("label_55")
+        self.gridLayout_12.addWidget(self.label_55, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_12, 11, 0, 1, 1)
+        self.gridLayout_13 = QtWidgets.QGridLayout()
+        self.gridLayout_13.setObjectName("gridLayout_13")
+        self.label_56 = QtWidgets.QLabel(self.centralwidget)
+        self.label_56.setMinimumSize(QtCore.QSize(668, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_56.setFont(font)
+        self.label_56.setObjectName("label_56")
+        self.gridLayout_13.addWidget(self.label_56, 0, 0, 1, 1)
+        self.label_57 = QtWidgets.QLabel(self.centralwidget)
+        self.label_57.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_57.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_57.setFont(font)
+        self.label_57.setObjectName("label_57")
+        self.gridLayout_13.addWidget(self.label_57, 0, 1, 1, 1)
+        self.label_58 = QtWidgets.QLabel(self.centralwidget)
+        self.label_58.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_58.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_58.setFont(font)
+        self.label_58.setObjectName("label_58")
+        self.gridLayout_13.addWidget(self.label_58, 0, 2, 1, 1)
+        self.doubleSpinBox_11 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_11.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_11.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_11.setFont(font)
+        self.doubleSpinBox_11.setDecimals(2)
+        self.doubleSpinBox_11.setMinimum(-16777215.0)
+        self.doubleSpinBox_11.setMaximum(16777215.0)
+        self.doubleSpinBox_11.setSingleStep(0.01)
+        self.doubleSpinBox_11.setObjectName("doubleSpinBox_11")
+        self.gridLayout_13.addWidget(self.doubleSpinBox_11, 0, 3, 1, 1)
+        self.label_59 = QtWidgets.QLabel(self.centralwidget)
+        self.label_59.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_59.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_59.setFont(font)
+        self.label_59.setObjectName("label_59")
+        self.gridLayout_13.addWidget(self.label_59, 0, 4, 1, 1)
+        self.label_60 = QtWidgets.QLabel(self.centralwidget)
+        self.label_60.setText("")
+        self.label_60.setObjectName("label_60")
+        self.gridLayout_13.addWidget(self.label_60, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_13, 12, 0, 1, 1)
+        self.gridLayout_15 = QtWidgets.QGridLayout()
+        self.gridLayout_15.setObjectName("gridLayout_15")
+        self.label_61 = QtWidgets.QLabel(self.centralwidget)
+        self.label_61.setMinimumSize(QtCore.QSize(475, 35))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_61.setFont(font)
+        self.label_61.setObjectName("label_61")
+        self.gridLayout_15.addWidget(self.label_61, 0, 0, 1, 1)
+        self.label_62 = QtWidgets.QLabel(self.centralwidget)
+        self.label_62.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_62.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_62.setFont(font)
+        self.label_62.setObjectName("label_62")
+        self.gridLayout_15.addWidget(self.label_62, 0, 1, 1, 1)
+        self.label_63 = QtWidgets.QLabel(self.centralwidget)
+        self.label_63.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_63.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_63.setFont(font)
+        self.label_63.setObjectName("label_63")
+        self.gridLayout_15.addWidget(self.label_63, 0, 2, 1, 1)
+        self.doubleSpinBox_12 = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.doubleSpinBox_12.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_12.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_12.setFont(font)
+        self.doubleSpinBox_12.setDecimals(2)
+        self.doubleSpinBox_12.setMinimum(-16777215.0)
+        self.doubleSpinBox_12.setMaximum(16777215.0)
+        self.doubleSpinBox_12.setSingleStep(0.01)
+        self.doubleSpinBox_12.setObjectName("doubleSpinBox_12")
+        self.gridLayout_15.addWidget(self.doubleSpinBox_12, 0, 3, 1, 1)
+        self.label_64 = QtWidgets.QLabel(self.centralwidget)
+        self.label_64.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_64.setMaximumSize(QtCore.QSize(35, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_64.setFont(font)
+        self.label_64.setObjectName("label_64")
+        self.gridLayout_15.addWidget(self.label_64, 0, 4, 1, 1)
+        self.label_65 = QtWidgets.QLabel(self.centralwidget)
+        self.label_65.setText("")
+        self.label_65.setObjectName("label_65")
+        self.gridLayout_15.addWidget(self.label_65, 0, 5, 1, 1)
+        self.gridLayout_16.addLayout(self.gridLayout_15, 13, 0, 1, 1)
+        self.gridLayout_18.addLayout(self.gridLayout_16, 1, 0, 1, 1)
+        self.gridLayout_17 = QtWidgets.QGridLayout()
+        self.gridLayout_17.setObjectName("gridLayout_17")
+        self.pushButton = QtWidgets.QPushButton(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton.setFont(font)
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout_17.addWidget(self.pushButton, 0, 0, 1, 1)
+        self.pushButton_2 = QtWidgets.QPushButton(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton_2.setFont(font)
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.gridLayout_17.addWidget(self.pushButton_2, 0, 1, 1, 1)
+        self.pushButton_3 = QtWidgets.QPushButton(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton_3.setFont(font)
+        self.pushButton_3.setObjectName("pushButton_3")
+        self.gridLayout_17.addWidget(self.pushButton_3, 0, 2, 1, 1)
+        self.gridLayout_18.addLayout(self.gridLayout_17, 2, 0, 1, 1)
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "Расчет потерь электроэнергии на конечном участке электросети "))
+        self.label_11.setText(_translate("MainWindow", "<html><head/><body><p>Расчет потерь электроэнергии на конечном участке электросети</p></body></html>"))
+        self.label_3.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_2.setText(_translate("MainWindow", "<html><head/><body><p>n</p></body></html>"))
+        self.label.setText(_translate("MainWindow", "<html><head/><body><p>Введите количество домов в СНТ: </p></body></html>"))
+        self.label_8.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_9.setText(_translate("MainWindow", "<html><head/><body><p/></body></html>"))
+        self.label_6.setText(_translate("MainWindow", "<html><head/><body><p>Введите количество участков:</p></body></html>"))
+        self.label_7.setText(_translate("MainWindow", "<html><head/><body><p>m</p></body></html>"))
+        self.label_37.setText(_translate("MainWindow", "<html><head/><body><p>Заполните исходные данные по участкам: </p></body></html>"))
+        self.pushButton_8.setText(_translate("MainWindow", "Ввести таблицу"))
+        self.label_17.setText(_translate("MainWindow", "<html><head/><body><p>Введите напряжение сети: </p></body></html>"))
+        self.label_18.setText(_translate("MainWindow", "<html><head/><body><p>U<span style=\" vertical-align:sub;\">1</span></p></body></html>"))
+        self.label_19.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_20.setText(_translate("MainWindow", "<html><head/><body><p>B</p></body></html>"))
+        self.label_32.setText(_translate("MainWindow", "<html><head/><body><p>Введите % потери напряжения:</p></body></html>"))
+        self.label_38.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_35.setText(_translate("MainWindow", "<html><head/><body><p>%</p></body></html>"))
+        self.label_34.setText(_translate("MainWindow", "<html><head/><body><p/></body></html>"))
+        self.label_27.setText(_translate("MainWindow", "<html><head/><body><p>Введите коэффициент (потери) мощности: </p></body></html>"))
+        self.label_28.setText(_translate("MainWindow", "<html><head/><body><p>cos φ</p></body></html>"))
+        self.label_29.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_30.setText(_translate("MainWindow", "<html><head/><body><p/></body></html>"))
+        self.label_22.setText(_translate("MainWindow", "<html><head/><body><p>Введите мощность вырабатываемую КПД:</p></body></html>"))
+        self.label_23.setText(_translate("MainWindow", "<html><head/><body><p>P<span style=\" vertical-align:sub;\">кпд</span></p></body></html>"))
+        self.label_24.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_25.setText(_translate("MainWindow", "<html><head/><body><p>кВт</p></body></html>"))
+        self.label_46.setText(_translate("MainWindow", "<html><head/><body><p>Введите удельное сопротивление проводника:</p></body></html>"))
+        self.label_47.setText(_translate("MainWindow", "<html><head/><body><p>ρ</p></body></html>"))
+        self.label_48.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_49.setText(_translate("MainWindow", "<html><head/><body><p>Ом.м.</p></body></html>"))
+        self.label_12.setText(_translate("MainWindow", "<html><head/><body><p>Введите число жил в СИП-2:</p></body></html>"))
+        self.label_14.setText(_translate("MainWindow", "<html><head/><body><p>k</p></body></html>"))
+        self.label_15.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_16.setText(_translate("MainWindow", "<html><head/><body><p/></body></html>"))
+        self.label_39.setText(_translate("MainWindow", "<html><head/><body><p>Введите напряжение на одной жиле: </p></body></html>"))
+        self.label_40.setText(_translate("MainWindow", "<html><head/><body><p>U<span style=\" vertical-align:sub;\">2</span></p></body></html>"))
+        self.label_41.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_42.setText(_translate("MainWindow", "<html><head/><body><p>B</p></body></html>"))
+        self.label_44.setText(_translate("MainWindow", "<html><head/><body><p>Введите наименование участка:</p></body></html>"))
+        self.label_45.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-family:\'Times New Roman\',\'serif\';\">Введите начальное значение магистрального провода на участке:</span></p></body></html>"))
+        self.label_51.setText(_translate("MainWindow", "<html><head/><body><p>d<span style=\" vertical-align:sub;\">0</span></p></body></html>"))
+        self.label_52.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_54.setText(_translate("MainWindow", "<html><head/><body><p>мм</p></body></html>"))
+        self.label_56.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-family:\'Times New Roman\',\'serif\';\">Введите предлагаемое значение магистрального провода на участке:</span></p></body></html>"))
+        self.label_57.setText(_translate("MainWindow", "<html><head/><body><p>d</p></body></html>"))
+        self.label_58.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_59.setText(_translate("MainWindow", "<html><head/><body><p>мм</p></body></html>"))
+        self.label_61.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-family:\'Times New Roman\',\'serif\';\">Введите количество фаз:</span></p></body></html>"))
+        self.label_62.setText(_translate("MainWindow", "<html><head/><body><p>ф</p></body></html>"))
+        self.label_63.setText(_translate("MainWindow", "<html><head/><body><p>=</p></body></html>"))
+        self.label_64.setText(_translate("MainWindow", "<html><head/><body><p/></body></html>"))
+        self.pushButton.setText(_translate("MainWindow", "Расчет потерь в \n"
+"предлагаемой схеме"))
+        self.pushButton_2.setText(_translate("MainWindow", "Расчет потерь в \n"
+"существующей линии"))
+        self.pushButton_3.setText(_translate("MainWindow", "Расчет снижения потерь \n"
+"при реконструкции"))
+
+
+----- files/ResultWindow.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(623, 99)
+        Form.setMinimumSize(QtCore.QSize(0, 0))
+        Form.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        Form.setStyleSheet("")
+        self.gridLayout = QtWidgets.QGridLayout(Form)
+        self.gridLayout.setObjectName("gridLayout")
+        self.pushButton_2 = QtWidgets.QPushButton(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton_2.setFont(font)
+        self.pushButton_2.setStyleSheet("")
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.gridLayout.addWidget(self.pushButton_2, 0, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton.setFont(font)
+        self.pushButton.setStyleSheet("")
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Расчет потерь напряжения на участках электросети"))
+        self.pushButton_2.setText(_translate("Form", "Посмотреть таблицу"))
+        self.pushButton.setText(_translate("Form", "ОК"))
+
+
+----- files/ResultWindow1.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(649, 219)
+        Form.setMinimumSize(QtCore.QSize(0, 0))
+        Form.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        Form.setStyleSheet("")
+        self.gridLayout_5 = QtWidgets.QGridLayout(Form)
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.gridLayout = QtWidgets.QGridLayout()
+        self.gridLayout.setObjectName("gridLayout")
+        self.label = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.comboBox = QtWidgets.QComboBox(Form)
+        self.comboBox.setEnabled(False)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.comboBox.setFont(font)
+        self.comboBox.setStyleSheet("color: black; background-color: white;")
+        self.comboBox.setObjectName("comboBox")
+        self.gridLayout.addWidget(self.comboBox, 0, 1, 1, 1)
+        self.gridLayout_5.addLayout(self.gridLayout, 0, 0, 1, 1)
+        self.gridLayout_2 = QtWidgets.QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.label_19 = QtWidgets.QLabel(Form)
+        self.label_19.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_19.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_19.setFont(font)
+        self.label_19.setObjectName("label_19")
+        self.gridLayout_2.addWidget(self.label_19, 0, 1, 1, 1)
+        self.label_18 = QtWidgets.QLabel(Form)
+        self.label_18.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_18.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_18.setFont(font)
+        self.label_18.setObjectName("label_18")
+        self.gridLayout_2.addWidget(self.label_18, 0, 0, 1, 1)
+        self.label_20 = QtWidgets.QLabel(Form)
+        self.label_20.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_20.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_20.setFont(font)
+        self.label_20.setObjectName("label_20")
+        self.gridLayout_2.addWidget(self.label_20, 0, 3, 1, 1)
+        self.doubleSpinBox_10 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_10.setEnabled(False)
+        self.doubleSpinBox_10.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_10.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_10.setFont(font)
+        self.doubleSpinBox_10.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_10.setDecimals(0)
+        self.doubleSpinBox_10.setMinimum(-999999999.0)
+        self.doubleSpinBox_10.setMaximum(999999999.0)
+        self.doubleSpinBox_10.setSingleStep(0.001)
+        self.doubleSpinBox_10.setProperty("value", 0.0)
+        self.doubleSpinBox_10.setObjectName("doubleSpinBox_10")
+        self.gridLayout_2.addWidget(self.doubleSpinBox_10, 0, 2, 1, 1)
+        self.gridLayout_5.addLayout(self.gridLayout_2, 1, 0, 1, 1)
+        self.gridLayout_3 = QtWidgets.QGridLayout()
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.label_3 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout_3.addWidget(self.label_3, 0, 2, 1, 1)
+        self.label_2 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_3.addWidget(self.label_2, 0, 0, 1, 1)
+        self.doubleSpinBox_11 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_11.setEnabled(False)
+        self.doubleSpinBox_11.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_11.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_11.setFont(font)
+        self.doubleSpinBox_11.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_11.setDecimals(0)
+        self.doubleSpinBox_11.setMinimum(-999999999.0)
+        self.doubleSpinBox_11.setMaximum(999999999.0)
+        self.doubleSpinBox_11.setSingleStep(0.001)
+        self.doubleSpinBox_11.setProperty("value", 0.0)
+        self.doubleSpinBox_11.setObjectName("doubleSpinBox_11")
+        self.gridLayout_3.addWidget(self.doubleSpinBox_11, 0, 1, 1, 1)
+        self.comboBox_2 = QtWidgets.QComboBox(Form)
+        self.comboBox_2.setEnabled(False)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.comboBox_2.setFont(font)
+        self.comboBox_2.setStyleSheet("color: black; background-color: white;")
+        self.comboBox_2.setObjectName("comboBox_2")
+        self.gridLayout_3.addWidget(self.comboBox_2, 0, 3, 1, 1)
+        self.gridLayout_3.setColumnStretch(3, 1)
+        self.gridLayout_5.addLayout(self.gridLayout_3, 2, 0, 1, 1)
+        self.gridLayout_4 = QtWidgets.QGridLayout()
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.label_21 = QtWidgets.QLabel(Form)
+        self.label_21.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_21.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_21.setFont(font)
+        self.label_21.setObjectName("label_21")
+        self.gridLayout_4.addWidget(self.label_21, 0, 1, 1, 1)
+        self.label_22 = QtWidgets.QLabel(Form)
+        self.label_22.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_22.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_22.setFont(font)
+        self.label_22.setObjectName("label_22")
+        self.gridLayout_4.addWidget(self.label_22, 0, 0, 1, 1)
+        self.label_23 = QtWidgets.QLabel(Form)
+        self.label_23.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_23.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_23.setFont(font)
+        self.label_23.setObjectName("label_23")
+        self.gridLayout_4.addWidget(self.label_23, 0, 3, 1, 1)
+        self.doubleSpinBox_12 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_12.setEnabled(False)
+        self.doubleSpinBox_12.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_12.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_12.setFont(font)
+        self.doubleSpinBox_12.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_12.setDecimals(3)
+        self.doubleSpinBox_12.setMinimum(-999999999.0)
+        self.doubleSpinBox_12.setMaximum(999999999.0)
+        self.doubleSpinBox_12.setSingleStep(0.001)
+        self.doubleSpinBox_12.setProperty("value", 0.0)
+        self.doubleSpinBox_12.setObjectName("doubleSpinBox_12")
+        self.gridLayout_4.addWidget(self.doubleSpinBox_12, 0, 2, 1, 1)
+        self.gridLayout_5.addLayout(self.gridLayout_4, 3, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton.setFont(font)
+        self.pushButton.setStyleSheet("")
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout_5.addWidget(self.pushButton, 4, 0, 1, 1)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Расчет потерь в предлагаемой схеме"))
+        self.label.setText(_translate("Form", "Потери по 1 фазе за час на участке"))
+        self.label_19.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_18.setText(_translate("Form", "<html><head/><body><p>P<span style=\" vertical-align:sub;\">1ф</span></p></body></html>"))
+        self.label_20.setText(_translate("Form", "<html><head/><body><p>Вт/ч</p></body></html>"))
+        self.label_3.setText(_translate("Form", "фазам на участке"))
+        self.label_2.setText(_translate("Form", "Потери по"))
+        self.label_21.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_22.setText(_translate("Form", "<html><head/><body><p>Р<span style=\" vertical-align:sub;\">общ</span></p></body></html>"))
+        self.label_23.setText(_translate("Form", "<html><head/><body><p>кВт/ч</p></body></html>"))
+        self.pushButton.setText(_translate("Form", "ОК"))
+
+
+----- files/ResultWindow2.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(840, 351)
+        Form.setMinimumSize(QtCore.QSize(0, 0))
+        Form.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        Form.setStyleSheet("")
+        self.gridLayout_9 = QtWidgets.QGridLayout(Form)
+        self.gridLayout_9.setObjectName("gridLayout_9")
+        self.gridLayout = QtWidgets.QGridLayout()
+        self.gridLayout.setObjectName("gridLayout")
+        self.label_18 = QtWidgets.QLabel(Form)
+        self.label_18.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_18.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_18.setFont(font)
+        self.label_18.setObjectName("label_18")
+        self.gridLayout.addWidget(self.label_18, 0, 2, 1, 1)
+        self.label_20 = QtWidgets.QLabel(Form)
+        self.label_20.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_20.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_20.setFont(font)
+        self.label_20.setObjectName("label_20")
+        self.gridLayout.addWidget(self.label_20, 0, 5, 1, 1)
+        self.doubleSpinBox_10 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_10.setEnabled(False)
+        self.doubleSpinBox_10.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_10.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_10.setFont(font)
+        self.doubleSpinBox_10.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_10.setDecimals(0)
+        self.doubleSpinBox_10.setMinimum(-999999999.0)
+        self.doubleSpinBox_10.setMaximum(999999999.0)
+        self.doubleSpinBox_10.setSingleStep(0.001)
+        self.doubleSpinBox_10.setProperty("value", 0.0)
+        self.doubleSpinBox_10.setObjectName("doubleSpinBox_10")
+        self.gridLayout.addWidget(self.doubleSpinBox_10, 0, 4, 1, 1)
+        self.label = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.label_19 = QtWidgets.QLabel(Form)
+        self.label_19.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_19.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_19.setFont(font)
+        self.label_19.setObjectName("label_19")
+        self.gridLayout.addWidget(self.label_19, 0, 3, 1, 1)
+        self.gridLayout_9.addLayout(self.gridLayout, 0, 0, 1, 1)
+        self.gridLayout_2 = QtWidgets.QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.label_2 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_2.addWidget(self.label_2, 0, 0, 1, 1)
+        self.comboBox = QtWidgets.QComboBox(Form)
+        self.comboBox.setEnabled(False)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.comboBox.setFont(font)
+        self.comboBox.setStyleSheet("color: black; background-color: white;")
+        self.comboBox.setObjectName("comboBox")
+        self.gridLayout_2.addWidget(self.comboBox, 0, 1, 1, 1)
+        self.label_3 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout_2.addWidget(self.label_3, 0, 2, 1, 1)
+        self.gridLayout_2.setColumnStretch(2, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_2, 1, 0, 1, 1)
+        self.gridLayout_3 = QtWidgets.QGridLayout()
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.label_21 = QtWidgets.QLabel(Form)
+        self.label_21.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_21.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_21.setFont(font)
+        self.label_21.setObjectName("label_21")
+        self.gridLayout_3.addWidget(self.label_21, 0, 1, 1, 1)
+        self.label_22 = QtWidgets.QLabel(Form)
+        self.label_22.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_22.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_22.setFont(font)
+        self.label_22.setObjectName("label_22")
+        self.gridLayout_3.addWidget(self.label_22, 0, 0, 1, 1)
+        self.label_23 = QtWidgets.QLabel(Form)
+        self.label_23.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_23.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_23.setFont(font)
+        self.label_23.setObjectName("label_23")
+        self.gridLayout_3.addWidget(self.label_23, 0, 3, 1, 1)
+        self.doubleSpinBox_11 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_11.setEnabled(False)
+        self.doubleSpinBox_11.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_11.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_11.setFont(font)
+        self.doubleSpinBox_11.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_11.setDecimals(1)
+        self.doubleSpinBox_11.setMinimum(-999999999.0)
+        self.doubleSpinBox_11.setMaximum(999999999.0)
+        self.doubleSpinBox_11.setSingleStep(0.001)
+        self.doubleSpinBox_11.setProperty("value", 0.0)
+        self.doubleSpinBox_11.setObjectName("doubleSpinBox_11")
+        self.gridLayout_3.addWidget(self.doubleSpinBox_11, 0, 2, 1, 1)
+        self.gridLayout_3.setColumnStretch(3, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_3, 2, 0, 1, 1)
+        self.gridLayout_4 = QtWidgets.QGridLayout()
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.label_25 = QtWidgets.QLabel(Form)
+        self.label_25.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_25.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_25.setFont(font)
+        self.label_25.setObjectName("label_25")
+        self.gridLayout_4.addWidget(self.label_25, 0, 0, 1, 1)
+        self.label_24 = QtWidgets.QLabel(Form)
+        self.label_24.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_24.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_24.setFont(font)
+        self.label_24.setObjectName("label_24")
+        self.gridLayout_4.addWidget(self.label_24, 0, 1, 1, 1)
+        self.doubleSpinBox_12 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_12.setEnabled(False)
+        self.doubleSpinBox_12.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_12.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_12.setFont(font)
+        self.doubleSpinBox_12.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_12.setDecimals(0)
+        self.doubleSpinBox_12.setMinimum(-999999999.0)
+        self.doubleSpinBox_12.setMaximum(999999999.0)
+        self.doubleSpinBox_12.setSingleStep(0.001)
+        self.doubleSpinBox_12.setProperty("value", 0.0)
+        self.doubleSpinBox_12.setObjectName("doubleSpinBox_12")
+        self.gridLayout_4.addWidget(self.doubleSpinBox_12, 0, 2, 1, 1)
+        self.label_26 = QtWidgets.QLabel(Form)
+        self.label_26.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_26.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_26.setFont(font)
+        self.label_26.setObjectName("label_26")
+        self.gridLayout_4.addWidget(self.label_26, 0, 3, 1, 1)
+        self.gridLayout_4.setColumnStretch(3, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_4, 3, 0, 1, 1)
+        self.gridLayout_5 = QtWidgets.QGridLayout()
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.label_27 = QtWidgets.QLabel(Form)
+        self.label_27.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_27.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_27.setFont(font)
+        self.label_27.setObjectName("label_27")
+        self.gridLayout_5.addWidget(self.label_27, 0, 1, 1, 1)
+        self.label_28 = QtWidgets.QLabel(Form)
+        self.label_28.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_28.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_28.setFont(font)
+        self.label_28.setObjectName("label_28")
+        self.gridLayout_5.addWidget(self.label_28, 0, 0, 1, 1)
+        self.label_29 = QtWidgets.QLabel(Form)
+        self.label_29.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_29.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_29.setFont(font)
+        self.label_29.setObjectName("label_29")
+        self.gridLayout_5.addWidget(self.label_29, 0, 3, 1, 1)
+        self.doubleSpinBox_13 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_13.setEnabled(False)
+        self.doubleSpinBox_13.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_13.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_13.setFont(font)
+        self.doubleSpinBox_13.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_13.setDecimals(1)
+        self.doubleSpinBox_13.setMinimum(-999999999.0)
+        self.doubleSpinBox_13.setMaximum(999999999.0)
+        self.doubleSpinBox_13.setSingleStep(0.001)
+        self.doubleSpinBox_13.setProperty("value", 0.0)
+        self.doubleSpinBox_13.setObjectName("doubleSpinBox_13")
+        self.gridLayout_5.addWidget(self.doubleSpinBox_13, 0, 2, 1, 1)
+        self.gridLayout_5.setColumnStretch(3, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_5, 4, 0, 1, 1)
+        self.gridLayout_7 = QtWidgets.QGridLayout()
+        self.gridLayout_7.setObjectName("gridLayout_7")
+        self.label_30 = QtWidgets.QLabel(Form)
+        self.label_30.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_30.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_30.setFont(font)
+        self.label_30.setObjectName("label_30")
+        self.gridLayout_7.addWidget(self.label_30, 0, 2, 1, 1)
+        self.label_31 = QtWidgets.QLabel(Form)
+        self.label_31.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_31.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_31.setFont(font)
+        self.label_31.setObjectName("label_31")
+        self.gridLayout_7.addWidget(self.label_31, 0, 5, 1, 1)
+        self.doubleSpinBox_14 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_14.setEnabled(False)
+        self.doubleSpinBox_14.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_14.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_14.setFont(font)
+        self.doubleSpinBox_14.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_14.setDecimals(0)
+        self.doubleSpinBox_14.setMinimum(-999999999.0)
+        self.doubleSpinBox_14.setMaximum(999999999.0)
+        self.doubleSpinBox_14.setSingleStep(0.001)
+        self.doubleSpinBox_14.setProperty("value", 0.0)
+        self.doubleSpinBox_14.setObjectName("doubleSpinBox_14")
+        self.gridLayout_7.addWidget(self.doubleSpinBox_14, 0, 4, 1, 1)
+        self.label_6 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_6.setFont(font)
+        self.label_6.setObjectName("label_6")
+        self.gridLayout_7.addWidget(self.label_6, 0, 0, 1, 1)
+        self.label_32 = QtWidgets.QLabel(Form)
+        self.label_32.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_32.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_32.setFont(font)
+        self.label_32.setObjectName("label_32")
+        self.gridLayout_7.addWidget(self.label_32, 0, 3, 1, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_7, 5, 0, 1, 1)
+        self.gridLayout_6 = QtWidgets.QGridLayout()
+        self.gridLayout_6.setObjectName("gridLayout_6")
+        self.label_4 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
+        self.gridLayout_6.addWidget(self.label_4, 0, 0, 1, 1)
+        self.label_5 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_5.setFont(font)
+        self.label_5.setObjectName("label_5")
+        self.gridLayout_6.addWidget(self.label_5, 0, 2, 1, 1)
+        self.doubleSpinBox_16 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_16.setEnabled(False)
+        self.doubleSpinBox_16.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_16.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_16.setFont(font)
+        self.doubleSpinBox_16.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_16.setDecimals(0)
+        self.doubleSpinBox_16.setMinimum(-999999999.0)
+        self.doubleSpinBox_16.setMaximum(999999999.0)
+        self.doubleSpinBox_16.setSingleStep(0.001)
+        self.doubleSpinBox_16.setProperty("value", 0.0)
+        self.doubleSpinBox_16.setObjectName("doubleSpinBox_16")
+        self.gridLayout_6.addWidget(self.doubleSpinBox_16, 0, 3, 1, 1)
+        self.comboBox_2 = QtWidgets.QComboBox(Form)
+        self.comboBox_2.setEnabled(False)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.comboBox_2.setFont(font)
+        self.comboBox_2.setStyleSheet("color: black; background-color: white;")
+        self.comboBox_2.setObjectName("comboBox_2")
+        self.gridLayout_6.addWidget(self.comboBox_2, 0, 1, 1, 1)
+        self.label_7 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_7.setFont(font)
+        self.label_7.setObjectName("label_7")
+        self.gridLayout_6.addWidget(self.label_7, 0, 4, 1, 1)
+        self.gridLayout_6.setColumnStretch(4, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_6, 6, 0, 1, 1)
+        self.gridLayout_8 = QtWidgets.QGridLayout()
+        self.gridLayout_8.setObjectName("gridLayout_8")
+        self.label_33 = QtWidgets.QLabel(Form)
+        self.label_33.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_33.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_33.setFont(font)
+        self.label_33.setObjectName("label_33")
+        self.gridLayout_8.addWidget(self.label_33, 0, 1, 1, 1)
+        self.label_34 = QtWidgets.QLabel(Form)
+        self.label_34.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_34.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_34.setFont(font)
+        self.label_34.setObjectName("label_34")
+        self.gridLayout_8.addWidget(self.label_34, 0, 0, 1, 1)
+        self.label_35 = QtWidgets.QLabel(Form)
+        self.label_35.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_35.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_35.setFont(font)
+        self.label_35.setObjectName("label_35")
+        self.gridLayout_8.addWidget(self.label_35, 0, 3, 1, 1)
+        self.doubleSpinBox_15 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_15.setEnabled(False)
+        self.doubleSpinBox_15.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_15.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_15.setFont(font)
+        self.doubleSpinBox_15.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_15.setDecimals(3)
+        self.doubleSpinBox_15.setMinimum(-999999999.0)
+        self.doubleSpinBox_15.setMaximum(999999999.0)
+        self.doubleSpinBox_15.setSingleStep(0.001)
+        self.doubleSpinBox_15.setProperty("value", 0.0)
+        self.doubleSpinBox_15.setObjectName("doubleSpinBox_15")
+        self.gridLayout_8.addWidget(self.doubleSpinBox_15, 0, 2, 1, 1)
+        self.gridLayout_8.setColumnStretch(3, 1)
+        self.gridLayout_9.addLayout(self.gridLayout_8, 7, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton.setFont(font)
+        self.pushButton.setStyleSheet("")
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout_9.addWidget(self.pushButton, 8, 0, 1, 1)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Расчет потерь в предлагаемой схеме"))
+        self.label_18.setText(_translate("Form", "<html><head/><body><p>d<span style=\" vertical-align:sub;\">0</span></p></body></html>"))
+        self.label_20.setText(_translate("Form", "<html><head/><body><p>мм</p></body></html>"))
+        self.label.setText(_translate("Form", "Потери с существующей линии диаметром"))
+        self.label_19.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_2.setText(_translate("Form", "на участке"))
+        self.label_3.setText(_translate("Form", "по 1 фазе:"))
+        self.label_21.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_22.setText(_translate("Form", "<html><head/><body><p>I</p></body></html>"))
+        self.label_23.setText(_translate("Form", "<html><head/><body><p>А</p></body></html>"))
+        self.label_25.setText(_translate("Form", "<html><head/><body><p>R</p></body></html>"))
+        self.label_24.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_26.setText(_translate("Form", "<html><head/><body><p>Ом</p></body></html>"))
+        self.label_27.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_28.setText(_translate("Form", "<html><head/><body><p>P′<span style=\" vertical-align:sub;\">1ф</span></p></body></html>"))
+        self.label_29.setText(_translate("Form", "<html><head/><body><p>Вт/ч</p></body></html>"))
+        self.label_30.setText(_translate("Form", "<html><head/><body><p>d<span style=\" vertical-align:sub;\">0</span></p></body></html>"))
+        self.label_31.setText(_translate("Form", "<html><head/><body><p>мм</p></body></html>"))
+        self.label_6.setText(_translate("Form", "Потери с существующей линии диаметром"))
+        self.label_32.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_4.setText(_translate("Form", "на участке"))
+        self.label_5.setText(_translate("Form", "по"))
+        self.label_7.setText(_translate("Form", "фазам:"))
+        self.label_33.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_34.setText(_translate("Form", "<html><head/><body><p>P<span style=\" vertical-align:sub;\">общ</span></p></body></html>"))
+        self.label_35.setText(_translate("Form", "<html><head/><body><p>кВт/ч</p></body></html>"))
+        self.pushButton.setText(_translate("Form", "ОК"))
+
+
+----- files/ResultWindow3.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(551, 264)
+        Form.setMinimumSize(QtCore.QSize(0, 0))
+        Form.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        Form.setWindowTitle("")
+        Form.setStyleSheet("")
+        self.gridLayout = QtWidgets.QGridLayout(Form)
+        self.gridLayout.setObjectName("gridLayout")
+        self.label = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.gridLayout_3 = QtWidgets.QGridLayout()
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.label_21 = QtWidgets.QLabel(Form)
+        self.label_21.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_21.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_21.setFont(font)
+        self.label_21.setObjectName("label_21")
+        self.gridLayout_3.addWidget(self.label_21, 0, 1, 1, 1)
+        self.label_22 = QtWidgets.QLabel(Form)
+        self.label_22.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_22.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_22.setFont(font)
+        self.label_22.setObjectName("label_22")
+        self.gridLayout_3.addWidget(self.label_22, 0, 0, 1, 1)
+        self.label_23 = QtWidgets.QLabel(Form)
+        self.label_23.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_23.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_23.setFont(font)
+        self.label_23.setObjectName("label_23")
+        self.gridLayout_3.addWidget(self.label_23, 0, 3, 1, 1)
+        self.doubleSpinBox_11 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_11.setEnabled(False)
+        self.doubleSpinBox_11.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_11.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_11.setFont(font)
+        self.doubleSpinBox_11.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_11.setDecimals(0)
+        self.doubleSpinBox_11.setMinimum(-999999999.0)
+        self.doubleSpinBox_11.setMaximum(999999999.0)
+        self.doubleSpinBox_11.setSingleStep(0.001)
+        self.doubleSpinBox_11.setProperty("value", 0.0)
+        self.doubleSpinBox_11.setObjectName("doubleSpinBox_11")
+        self.gridLayout_3.addWidget(self.doubleSpinBox_11, 0, 2, 1, 1)
+        self.gridLayout_3.setColumnStretch(3, 1)
+        self.gridLayout.addLayout(self.gridLayout_3, 1, 0, 1, 1)
+        self.label_2 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout.addWidget(self.label_2, 2, 0, 1, 1)
+        self.gridLayout_4 = QtWidgets.QGridLayout()
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.label_24 = QtWidgets.QLabel(Form)
+        self.label_24.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_24.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_24.setFont(font)
+        self.label_24.setObjectName("label_24")
+        self.gridLayout_4.addWidget(self.label_24, 0, 1, 1, 1)
+        self.doubleSpinBox_12 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_12.setEnabled(False)
+        self.doubleSpinBox_12.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_12.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_12.setFont(font)
+        self.doubleSpinBox_12.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_12.setDecimals(0)
+        self.doubleSpinBox_12.setMinimum(-999999999.0)
+        self.doubleSpinBox_12.setMaximum(999999999.0)
+        self.doubleSpinBox_12.setSingleStep(0.001)
+        self.doubleSpinBox_12.setProperty("value", 0.0)
+        self.doubleSpinBox_12.setObjectName("doubleSpinBox_12")
+        self.gridLayout_4.addWidget(self.doubleSpinBox_12, 0, 2, 1, 1)
+        self.label_26 = QtWidgets.QLabel(Form)
+        self.label_26.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_26.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_26.setFont(font)
+        self.label_26.setObjectName("label_26")
+        self.gridLayout_4.addWidget(self.label_26, 0, 3, 1, 1)
+        self.label_25 = QtWidgets.QLabel(Form)
+        self.label_25.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_25.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        font.setItalic(True)
+        self.label_25.setFont(font)
+        self.label_25.setObjectName("label_25")
+        self.gridLayout_4.addWidget(self.label_25, 0, 0, 1, 1)
+        self.gridLayout_4.setColumnStretch(3, 1)
+        self.gridLayout.addLayout(self.gridLayout_4, 3, 0, 1, 1)
+        self.label_3 = QtWidgets.QLabel(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout.addWidget(self.label_3, 4, 0, 1, 1)
+        self.gridLayout_5 = QtWidgets.QGridLayout()
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.label_27 = QtWidgets.QLabel(Form)
+        self.label_27.setMinimumSize(QtCore.QSize(20, 0))
+        self.label_27.setMaximumSize(QtCore.QSize(20, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_27.setFont(font)
+        self.label_27.setObjectName("label_27")
+        self.gridLayout_5.addWidget(self.label_27, 0, 1, 1, 1)
+        self.label_28 = QtWidgets.QLabel(Form)
+        self.label_28.setMinimumSize(QtCore.QSize(60, 0))
+        self.label_28.setMaximumSize(QtCore.QSize(60, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_28.setFont(font)
+        self.label_28.setObjectName("label_28")
+        self.gridLayout_5.addWidget(self.label_28, 0, 0, 1, 1)
+        self.label_29 = QtWidgets.QLabel(Form)
+        self.label_29.setMinimumSize(QtCore.QSize(35, 0))
+        self.label_29.setMaximumSize(QtCore.QSize(16777215, 16777215))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.label_29.setFont(font)
+        self.label_29.setObjectName("label_29")
+        self.gridLayout_5.addWidget(self.label_29, 0, 3, 1, 1)
+        self.doubleSpinBox_13 = QtWidgets.QDoubleSpinBox(Form)
+        self.doubleSpinBox_13.setEnabled(False)
+        self.doubleSpinBox_13.setMinimumSize(QtCore.QSize(214, 25))
+        self.doubleSpinBox_13.setMaximumSize(QtCore.QSize(16777215, 220))
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.doubleSpinBox_13.setFont(font)
+        self.doubleSpinBox_13.setStyleSheet("color: black; background-color: white;")
+        self.doubleSpinBox_13.setDecimals(0)
+        self.doubleSpinBox_13.setMinimum(-999999999.0)
+        self.doubleSpinBox_13.setMaximum(999999999.0)
+        self.doubleSpinBox_13.setSingleStep(0.001)
+        self.doubleSpinBox_13.setProperty("value", 0.0)
+        self.doubleSpinBox_13.setObjectName("doubleSpinBox_13")
+        self.gridLayout_5.addWidget(self.doubleSpinBox_13, 0, 2, 1, 1)
+        self.gridLayout_5.setColumnStretch(3, 1)
+        self.gridLayout.addLayout(self.gridLayout_5, 5, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(Form)
+        font = QtGui.QFont()
+        font.setFamily("Times New Roman")
+        font.setPointSize(14)
+        self.pushButton.setFont(font)
+        self.pushButton.setStyleSheet("")
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout.addWidget(self.pushButton, 6, 0, 1, 1)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        self.label.setText(_translate("Form", "Потери с существующей линии составляют:"))
+        self.label_21.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_22.setText(_translate("Form", "<html><head/><body><p>P<span style=\" vertical-align:sub;\">общ</span></p></body></html>"))
+        self.label_23.setText(_translate("Form", "<html><head/><body><p>кВт/мес.</p></body></html>"))
+        self.label_2.setText(_translate("Form", "Потери с предлагаемой линии составляют:"))
+        self.label_24.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_26.setText(_translate("Form", "<html><head/><body><p>кВт/мес.</p></body></html>"))
+        self.label_25.setText(_translate("Form", "<html><head/><body><p>P′<span style=\" vertical-align:sub;\">общ</span></p></body></html>"))
+        self.label_3.setText(_translate("Form", "Экономия электроэнергии составит:"))
+        self.label_27.setText(_translate("Form", "<html><head/><body><p>=</p></body></html>"))
+        self.label_28.setText(_translate("Form", "<html><head/><body><p><span style=\" font-style:italic;\">Э</span></p></body></html>"))
+        self.label_29.setText(_translate("Form", "<html><head/><body><p>кВт/мес.</p></body></html>"))
+        self.pushButton.setText(_translate("Form", "ОК"))
+
+
+----- files/TableWindow.py -----
+
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        Form.setObjectName("Form")
+        Form.resize(1100, 700)
+        self.gridLayout = QtWidgets.QGridLayout(Form)
+        self.gridLayout.setObjectName("gridLayout")
+        self.tableWidget = QtWidgets.QTableWidget(Form)
+        self.tableWidget.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setRowCount(0)
+        self.tableWidget.horizontalHeader().setDefaultSectionSize(100)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(75)
+        self.gridLayout.addWidget(self.tableWidget, 0, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(Form)
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
+
+        self.retranslateUi(Form)
+        QtCore.QMetaObject.connectSlotsByName(Form)
+
+    def retranslateUi(self, Form):
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Form"))
+        self.pushButton.setText(_translate("Form", "Готово"))
+
+
